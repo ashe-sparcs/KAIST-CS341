@@ -1,5 +1,11 @@
-all: client.c
-	gcc -g -Wall -o client client.c
+all: test1 test2
+
+test1 : client.c
+	gcc -o client client.c	
+		
+test2 : server.c
+	gcc -o server server.c
 
 clean: 
-	$(RM) client
+	rm client
+	rm server

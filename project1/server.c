@@ -5,17 +5,18 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <errno.h>
 
 #define BUFSIZE 1000000
 
 unsigned short checksum2(const char *buf, unsigned size);
 ssize_t rio_writen(int fd, void *usrbuf, size_t n);
 ssize_t rio_readn(int fd, void *usrbuf, size_t n);
+void caesar_shift(unsigned char *str_buffer, uint8_t op, uint8_t shift);
 
 int main(int argc, char **argv) {
     int serv_sock;
     int clnt_sock;
-    unsigned char *message;
     int str_len;
     uint8_t op, shift;
     uint32_t length;
@@ -35,7 +36,7 @@ int main(int argc, char **argv) {
     message = (unsigned char *) malloc(sizeof(unsigned char) * BUFSIZE);
     memset(message, 0, BUFSIZE);
     write_message = (unsigned char *) malloc(sizeof(unsigned char) * BUFSIZE);
-    memset(read_message, 0, BUFSIZE);
+    memset(write_message, 0, BUFSIZE);
     str_buffer = (unsigned char *) malloc(sizeof(unsigned char) * (BUFSIZE-8));
     memset(str_buffer, 0, BUFSIZE-8);
 
@@ -86,17 +87,42 @@ int main(int argc, char **argv) {
         }
         else if(pid == 0)
         {
-            char buf[100];
-
             counter++;
-            snprintf(buf, sizeof buf, "hi %d", counter);
-            send(new, buf, strlen(buf), 0);
+            int op, shift;
+            while(1) {
+                str_len2 = rio_readn(serv_sock, message, BUFSIZE);
+                //represent and assemble data as the protocol says.
+                memcpy(&op, message, 1);
+                memcpy(&shift, message+1, 1);
+                if (fread(str_buffer, 1, BUFSIZE-8, stdin) <= 0) { 
+                    break;
+                }
+                memcpy(&length, message+4, 4);
+                memcpy(str_buffer, message+8, ntohl(length)-8);
+                unsigned short check_sum = checksum2(message, ntohl(length));
+                if (check_sum != 0) {
+                    fprintf(stderr, "corrupted\n");
+                    close(clnt_sock);
+                    continue;
+                }
+
+                caesar_shift(str_buffer, op, shift);
+
+                memset(message+2, 0, 2);
+                memset(message+8, 0, strlen(str_buffer));
+                memcpy(message+8, str_buffer, strlen(str_buffer));
+                memcpy(message+2, checksum2(message, ntohl(length)), 2);
+
+                rio_writen(clnt_sock, message, ntohl(length));
+                memset(message, 0, BUFSIZE);
+                memset(str_buffer, 0, BUFSIZE-8); 
+            }
             close(new);
             break;
         }
+        close(clnt_sock);
 	}
     
-    close(clnt_sock);
 
     return 0;
 }
@@ -195,4 +221,23 @@ ssize_t rio_writen(int fd, void *usrbuf, size_t n)
     bufp += nwritten;
     }
     return n;
+}
+
+void caesar_shift(unsigned char *str_buffer, uint8_t op, uint8_t shift) {
+    int i;
+
+    shift = shift % ('z' - 'a' + 1);
+    if (op == 1) {
+        shift = -shift;
+    }
+    for (i=0; i < strlen(str_buffer); i++) {
+        unsigned char str_buffer_i = str_buffer[i];
+        if (str_buffer_i > 64 && str_buffer_i < 91) {
+            str_buffer[i] = str_buffer_i + shift + 'a' - 'A';
+        } else if (str_buffer_i > 96 && str_buffer_i < 123) {
+            str_buffer[i] = str_buffer_i + shift;
+        } else {
+            
+        }
+    }    
 }
