@@ -76,8 +76,8 @@ int main(int argc, char **argv) {
     
 	if(connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
 	{//서버로 연결요청
-		printf("can't connect.\n");
-		exit(0);
+		fprintf(stderr, "can't connect.\n");
+		exit(1);
 	}
 
     fprintf(stderr, "connected\n");

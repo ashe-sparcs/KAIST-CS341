@@ -16,7 +16,6 @@ void caesar_shift(unsigned char *str_buffer, uint8_t op, uint8_t shift);
 
 int main(int argc, char **argv) {
     int serv_sock;
-    int clnt_sock;
     int str_len;
     uint8_t op, shift;
     uint32_t length;
@@ -31,6 +30,8 @@ int main(int argc, char **argv) {
     struct sockaddr_in serv_addr;
     struct sockaddr_in clnt_addr;
     unsigned int clnt_addr_size;
+
+    fprintf(stderr, "start of server program\n");
     
 
     message = (unsigned char *) malloc(sizeof(unsigned char) * BUFSIZE);
@@ -72,58 +73,64 @@ int main(int argc, char **argv) {
 
 	while(1)	
 	{
+        fprintf(stderr, "in outer while loop\n");
         new = accept(serv_sock, (struct sockaddr *)&clnt_addr, &clnt_addr_size);
 
         if ((pid = fork()) == -1)
         {
+            fprintf(stderr, "pid is -1\n");
             close(new);
             continue;
         }
         else if(pid > 0)
         {
+            fprintf(stderr, "pid is positive\n");
             close(new);
             counter++;
+            fprintf(stderr, "counter : %d\n", counter);
             continue;
         }
         else if(pid == 0)
         {
             counter++;
+            fprintf(stderr, "counter : %d\n", counter);
             int op, shift;
             while(1) {
-                str_len2 = rio_readn(serv_sock, message, BUFSIZE);
+                str_len2 = rio_readn(new, message, BUFSIZE);
+                if (str_len2 <= 0) { 
+                    fprintf(stderr, "broke\n");
+                    break;
+                }
                 //represent and assemble data as the protocol says.
                 memcpy(&op, message, 1);
                 memcpy(&shift, message+1, 1);
-                if (fread(str_buffer, 1, BUFSIZE-8, stdin) <= 0) { 
-                    break;
-                }
                 memcpy(&length, message+4, 4);
                 memcpy(str_buffer, message+8, ntohl(length)-8);
                 unsigned short check_sum = checksum2(message, ntohl(length));
                 if (check_sum != 0) {
                     fprintf(stderr, "corrupted\n");
-                    close(clnt_sock);
-                    continue;
+                    close(new);
+                    //continue;
+                    break;
                 }
 
                 caesar_shift(str_buffer, op, shift);
+                fprintf(stderr, "%s\n", str_buffer);
 
                 memset(message+2, 0, 2);
                 memset(message+8, 0, strlen(str_buffer));
                 memcpy(message+8, str_buffer, strlen(str_buffer));
                 memcpy(message+2, checksum2(message, ntohl(length)), 2);
 
-                rio_writen(clnt_sock, message, ntohl(length));
+                rio_writen(new, message, ntohl(length));
                 memset(message, 0, BUFSIZE);
                 memset(str_buffer, 0, BUFSIZE-8); 
             }
             close(new);
             break;
         }
-        close(clnt_sock);
 	}
-    
-
+    close(serv_sock);
     return 0;
 }
 
