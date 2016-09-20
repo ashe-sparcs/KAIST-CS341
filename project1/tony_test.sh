@@ -93,12 +93,12 @@ function large {
 }
 
 # Client-TestServer
-clilent $TSERVER
-echo "Client-TestServer test passed!"
+#clilent $TSERVER
+#echo "Client-TestServer test passed!"
 
 # Client-LocalServer
-#clilent $LOCALS
-#echo "client-LocalServer test passed!"
+clilent $LOCALS
+echo "client-LocalServer test passed!"
 
 # Large file
 echo "Now testing large size!"
@@ -109,12 +109,12 @@ tr A-Z a-z < a.txt > a_decrypted.txt
 
 
 # Large size, Testserver
-large $TSERVER
-echo "Largefile-TestServer test passed!"
+#large $TSERVER
+#echo "Largefile-TestServer test passed!"
 
 # Large size, Local Server
-#large $LOCALS
-#echo "Largefile-LocalServer test passed!"
+large $LOCALS
+echo "Largefile-LocalServer test passed!"
 
 echo "ALL tests passed! Hurray!"
 

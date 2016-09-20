@@ -6,13 +6,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <sys/wait.h>
 
-#define BUFSIZE 1000000
+#define BUFSIZE 10000000
 
 unsigned short checksum2(const char *buf, unsigned size);
 ssize_t rio_writen(int fd, void *usrbuf, size_t n);
 ssize_t rio_readn(int fd, void *usrbuf, size_t n);
-void caesar_shift(unsigned char *str_buffer, uint8_t op, uint8_t shift);
+void caesar_shift(unsigned char *str_buffer, unsigned char *message, uint8_t op, uint8_t shift);
 
 int main(int argc, char **argv) {
     int serv_sock;
@@ -24,7 +25,7 @@ int main(int argc, char **argv) {
     unsigned char *message;
     unsigned char *write_message;
     unsigned char *str_buffer;
-    int str_len1, str_len2;
+    int str_len1, str_len2, str_len3;
     unsigned short check_sum;
 
     struct sockaddr_in serv_addr;
@@ -80,15 +81,11 @@ int main(int argc, char **argv) {
         {
             fprintf(stderr, "pid is -1\n");
             close(new);
-            continue;
+            exit(1);
         }
         else if(pid > 0)
         {
-            fprintf(stderr, "pid is positive\n");
-            close(new);
-            counter++;
-            fprintf(stderr, "counter : %d\n", counter);
-            continue;
+            //parent 
         }
         else if(pid == 0)
         {
@@ -96,16 +93,25 @@ int main(int argc, char **argv) {
             fprintf(stderr, "counter : %d\n", counter);
             int op, shift;
             while(1) {
-                str_len2 = rio_readn(new, message, BUFSIZE);
-                fprintf(stderr, "str_len2 : %d\n", str_len2);
-                if (str_len2 <= 0) { 
-                    fprintf(stderr, "broke\n");
-                    break;
-                }
+                
+                str_len3 = rio_readn(new, message, 8);
+                fprintf(stderr, "str_len3 : %d\n", str_len3);
                 memcpy(&op, message, 1);
                 memcpy(&shift, message+1, 1);
                 memcpy(&length, message+4, 4);
-                memcpy(str_buffer, message+8, ntohl(length)-8);
+
+                if (str_len3 < 8) {
+                    close(new);
+                    break;
+                }
+                
+                str_len2 = rio_readn(new, message+8, ntohl(length)-8);
+                fprintf(stderr, "str_len2 : %d\n", str_len2);
+                if (str_len2 <= 0) { 
+                    fprintf(stderr, "broke\n");
+                    close(new);
+                    break;
+                }
                 unsigned short check_sum = checksum2(message, ntohl(length));
                 if (check_sum != 0) {
                     fprintf(stderr, "corrupted\n");
@@ -114,14 +120,16 @@ int main(int argc, char **argv) {
                     break;
                 }
 
-                caesar_shift(str_buffer, op, shift);
+                
+                caesar_shift(str_buffer,message,  op, shift);
+                
                 fprintf(stderr, "%s\n", str_buffer);
-
+                
                 
                 memset(message+2, 0, 2);
                 memset(message+8, 0, strlen(str_buffer));
                 memcpy(message+8, str_buffer, strlen(str_buffer));
-                unsigned short check_sum2 = checksum2(write_message, ntohl(length));
+                unsigned short check_sum2 = checksum2(message, ntohl(length));
                 memcpy(message+2, &check_sum2, 2);
 
                 /*
@@ -131,20 +139,28 @@ int main(int argc, char **argv) {
                 memcpy(write_message+8, str_buffer, strlen(str_buffer));
                 memcpy(write_message+2, &check_sum2, ntohl(length));
                 */
-                printf("double checksum : %u\n", checksum2(message, ntohl(length)));
 
+                
+                //printf("double checksum : %u\n", checksum2(message, ntohl(length)));
+
+                /*
                 printf("write_message 4byte : %x\n", *(uint32_t *)message);
                 printf("write_message 8byte : %x\n", *(uint32_t *)(message+4));
                 printf("write_message 12byte : %s\n", message+8);
+                */
 
                 rio_writen(new, message, ntohl(length));
+                //rio_writen(new, message, strlen(str_buffer)+8);
                 memset(message, 0, BUFSIZE);
                 memset(str_buffer, 0, BUFSIZE-8); 
                 memset(write_message, 0, BUFSIZE);
             }
+            /*
             close(new);
             break;
+            */
         }
+        //while(waitpid(-1,NULL,WNOHANG) > 0);
 	}
     close(serv_sock);
     return 0;
@@ -243,24 +259,31 @@ ssize_t rio_writen(int fd, void *usrbuf, size_t n)
     nleft -= nwritten;
     bufp += nwritten;
     }
+    fprintf(stderr, "rio write end\n");
     return n;
 }
 
-void caesar_shift(unsigned char *str_buffer, uint8_t op, uint8_t shift) {
+void caesar_shift(unsigned char *str_buffer, unsigned char *message, uint8_t op, uint8_t shift) {
     int i;
+    uint32_t length;
+    
+    memcpy(&length, message+4, 4);
 
     shift = shift % ('z' - 'a' + 1);
     if (op == 1) {
         shift = -shift;
     }
-    for (i=0; i < strlen(str_buffer); i++) {
-        unsigned char str_buffer_i = str_buffer[i];
-        if (str_buffer_i > 64 && str_buffer_i < 91) {
-            str_buffer[i] = str_buffer_i + shift + 'a' - 'A';
-        } else if (str_buffer_i > 96 && str_buffer_i < 123) {
-            str_buffer[i] = str_buffer_i + shift;
-        } else {
-            
+    for (i=8; i < ntohl(length); i++) {
+        unsigned char message_i = message[i];
+        if (message_i > 64 && message_i < 91) {
+            message_i = message_i + 'a' - 'A';
+            memcpy(message+i, &message_i, 1);
+        }
+    }    
+    for (i=8; i < ntohl(length); i++) {
+        unsigned char message_i = message[i];
+        if (message_i > 96 && message_i< 123) {
+            str_buffer[i] = message_i + shift;
         }
     }    
 }

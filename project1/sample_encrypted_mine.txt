@@ -1,0 +1,34 @@
+#lqfoxgh <xqlvwg.k>
+#lqfoxgh <v|v/w|shv.k>
+#lqfoxgh <v|v/vwdw.k>
+#lqfoxgh <ifqwo.k>
+#lqfoxgh <vwglr.k>
+#lqfoxgh <vwulqj.k>
+#lqfoxgh <vwgole.k>
+#lqfoxgh <zdlw.k>
+
+lqw pdlq()
+{
+	fkdu exi;
+	lqw slg = irun();
+	li(slg > 0)
+	{
+		sulqwi("l'p sduuhqw, suhvv hqwhu wr whuplqdwh, fklog ig: %g\q", slg);
+
+		uhdg(vwglq_ilohqr, &exi, vl}hri(exi));
+	}
+	hovh li(slg == 0)
+	{
+		sulqwi("l'p fklog, gdhprql}lqj\q");
+		vhwvlg();
+		sdxvh();
+		sulqwi("l'p fklog, h{lwlqj\q");
+	}
+	hovh
+	{
+		shuuru("irun");
+		h{lw(1);
+	}
+
+	uhwxuq 0;
+}

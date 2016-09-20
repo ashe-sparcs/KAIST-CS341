@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define BUFSIZE 1000000
+#define BUFSIZE 10000000
 
 unsigned short checksum2(const char *buf, unsigned size);
 ssize_t rio_writen(int fd, void *usrbuf, size_t n);
@@ -98,16 +98,25 @@ int main(int argc, char **argv) {
         memcpy(message+2, &check_sum, 2);
 
         
+        /*
         printf("message 4byte : %x\n", *(uint32_t *)message);
         printf("message 8byte : %x\n", *(uint32_t *)(message+4));
         printf("message 12byte : %s\n", message+8);
+        */
        
         
         //printf("double checksum : %u\n", checksum2(message, ntohl(length)));
 
         rio_writen(sock, message, ntohl(length));
         str_len2 = rio_readn(sock, read_message, ntohl(length));
+        /*
+        printf("read_message 4byte : %x\n", *(uint32_t *)read_message);
+        printf("read_message 8byte : %x\n", *(uint32_t *)(read_message+4));
+        printf("read_message 12byte : %s\n", read_message+8);
+        */
+
         printf("%s", read_message+8);
+        
         memset(message, 0, BUFSIZE);
         memset(str_buffer, 0, BUFSIZE-8); 
         memset(read_message, 0, BUFSIZE);
