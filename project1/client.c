@@ -97,11 +97,11 @@ int main(int argc, char **argv) {
         unsigned short check_sum = checksum2(message, ntohl(length));
         memcpy(message+2, &check_sum, 2);
 
-        /*
+        
         printf("message 4byte : %x\n", *(uint32_t *)message);
         printf("message 8byte : %x\n", *(uint32_t *)(message+4));
         printf("message 12byte : %s\n", message+8);
-        */
+       
         
         //printf("double checksum : %u\n", checksum2(message, ntohl(length)));
 

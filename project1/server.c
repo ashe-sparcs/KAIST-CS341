@@ -97,11 +97,11 @@ int main(int argc, char **argv) {
             int op, shift;
             while(1) {
                 str_len2 = rio_readn(new, message, BUFSIZE);
+                fprintf(stderr, "str_len2 : %d\n", str_len2);
                 if (str_len2 <= 0) { 
                     fprintf(stderr, "broke\n");
                     break;
                 }
-                //represent and assemble data as the protocol says.
                 memcpy(&op, message, 1);
                 memcpy(&shift, message+1, 1);
                 memcpy(&length, message+4, 4);
@@ -117,14 +117,30 @@ int main(int argc, char **argv) {
                 caesar_shift(str_buffer, op, shift);
                 fprintf(stderr, "%s\n", str_buffer);
 
+                
                 memset(message+2, 0, 2);
                 memset(message+8, 0, strlen(str_buffer));
                 memcpy(message+8, str_buffer, strlen(str_buffer));
-                memcpy(message+2, checksum2(message, ntohl(length)), 2);
+                unsigned short check_sum2 = checksum2(write_message, ntohl(length));
+                memcpy(message+2, &check_sum2, 2);
+
+                /*
+                memcpy(write_message, &op, 1);
+                memcpy(write_message+1, &shift, 1);
+                memcpy(write_message+4, &length, 4);
+                memcpy(write_message+8, str_buffer, strlen(str_buffer));
+                memcpy(write_message+2, &check_sum2, ntohl(length));
+                */
+                printf("double checksum : %u\n", checksum2(message, ntohl(length)));
+
+                printf("write_message 4byte : %x\n", *(uint32_t *)message);
+                printf("write_message 8byte : %x\n", *(uint32_t *)(message+4));
+                printf("write_message 12byte : %s\n", message+8);
 
                 rio_writen(new, message, ntohl(length));
                 memset(message, 0, BUFSIZE);
                 memset(str_buffer, 0, BUFSIZE-8); 
+                memset(write_message, 0, BUFSIZE);
             }
             close(new);
             break;
