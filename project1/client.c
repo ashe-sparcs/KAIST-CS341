@@ -115,6 +115,10 @@ int main(int argc, char **argv) {
         printf("read_message 12byte : %s\n", read_message+8);
         */
 
+        if (checksum2(read_message, ntohl(length)) != 0) {
+            break;
+        }
+
         printf("%s", read_message+8);
         
         memset(message, 0, BUFSIZE);

@@ -116,12 +116,11 @@ int main(int argc, char **argv) {
                 if (check_sum != 0) {
                     fprintf(stderr, "corrupted\n");
                     close(new);
-                    //continue;
                     break;
                 }
 
                 
-                caesar_shift(str_buffer,message,  op, shift);
+                caesar_shift(str_buffer, message,  op, shift);
                 
                 fprintf(stderr, "%s\n", str_buffer);
                 
@@ -266,12 +265,14 @@ ssize_t rio_writen(int fd, void *usrbuf, size_t n)
 void caesar_shift(unsigned char *str_buffer, unsigned char *message, uint8_t op, uint8_t shift) {
     int i;
     uint32_t length;
+    int shift2;
     
     memcpy(&length, message+4, 4);
 
-    shift = shift % ('z' - 'a' + 1);
+    shift2 = shift % ('z' - 'a' + 1);
+
     if (op == 1) {
-        shift = -shift;
+        shift2 = -(int)shift;
     }
     for (i=8; i < ntohl(length); i++) {
         unsigned char message_i = message[i];
@@ -283,7 +284,9 @@ void caesar_shift(unsigned char *str_buffer, unsigned char *message, uint8_t op,
     for (i=8; i < ntohl(length); i++) {
         unsigned char message_i = message[i];
         if (message_i > 96 && message_i< 123) {
-            str_buffer[i] = message_i + shift;
+            message_i = message_i + shift2;
+            str_buffer[i] = message_i;
+            //memcpy(str_buffer+i, &message_i, 1);
         }
     }    
 }
